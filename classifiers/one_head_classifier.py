@@ -29,21 +29,21 @@ X_test = X_test / 255.0
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
 
-# 定义数据增强函数
-def augment(images, labels):
-    images = tf.image.random_brightness(images, 0.2)  # 调整亮度
-    images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
-    images = tf.image.rot90(images, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))  # 随机旋转
-    return images, labels  # 返回增强后的图像和原始标签
+# # 定义数据增强函数
+# def augment(images, labels):
+#     images = tf.image.random_brightness(images, 0.2)  # 调整亮度
+#     images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
+#     images = tf.image.rot90(images, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))  # 随机旋转
+#     return images, labels  # 返回增强后的图像和原始标签
 
-def augment4valSet(images, labels):
-    images = tf.image.random_brightness(images, 0.2)  # 调整亮度
-    images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
-    return images, labels  # 返回增强后的图像和原始标签
+# def augment4valSet(images, labels):
+#     images = tf.image.random_brightness(images, 0.2)  # 调整亮度
+#     images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
+#     return images, labels  # 返回增强后的图像和原始标签
 
-# Apply augmentation
-X_train, y_train = augment(X_train, y_train)
-X_test, y_test = augment4valSet(X_test, y_test)
+# # Apply augmentation
+# X_train, y_train = augment(X_train, y_train)
+# X_test, y_test = augment4valSet(X_test, y_test)
 
 def circular_loss(y_true, y_pred):
     # Convert one-hot encoded labels back to integers
@@ -51,10 +51,10 @@ def circular_loss(y_true, y_pred):
     y_pred = tf.argmax(y_pred, axis=-1)
     
     # Convert labels to hours and minutes
-    true_hours = y_true // 60
-    true_minutes = y_true % 60
-    pred_hours = y_pred // 60
-    pred_minutes = y_pred % 60
+    true_hours = tf.cast(y_true // 60, tf.float32)
+    true_minutes = tf.cast(y_true % 60, tf.float32)
+    pred_hours = tf.cast(y_pred // 60, tf.float32)
+    pred_minutes = tf.cast(y_pred % 60, tf.float32)
     
     # Calculate the difference in minutes
     diff_hours = tf.abs(true_hours - pred_hours)
@@ -65,13 +65,10 @@ def circular_loss(y_true, y_pred):
     diff = tf.minimum(diff, 720 - diff)
     
     # Calculate L2 norm
-    l2_norm = tf.square(tf.cast(diff, tf.float32))
-    
-    # Apply the condition for correctness
-    correct_prediction = tf.cast(diff < 10, tf.float32)
+    l2_norm = tf.square(diff)
     
     # Calculate the final loss
-    loss = tf.reduce_mean(l2_norm * (1 - correct_prediction))
+    loss = tf.reduce_mean(l2_norm)
     
     return loss
 
