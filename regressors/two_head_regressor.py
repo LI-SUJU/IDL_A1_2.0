@@ -28,11 +28,19 @@ print("Number of labels:", labels.shape[0])
 # 划分数据集
 # Stack hours and minutes for simultaneous split, then separate them afterward
 labels_combined = np.stack([hours, minutes], axis=1)
-X_train, X_test, y_train_combined, y_test_combined = train_test_split(
+# First split into train and val+test
+X_train, X_val_test, y_train_combined, y_val_test_combined = train_test_split(
     images, labels_combined, test_size=0.2, random_state=42
 )
+
+# Then split val+test into val and test
+X_val, X_test, y_val_combined, y_test_combined = train_test_split(
+    X_val_test, y_val_test_combined, test_size=0.5, random_state=42
+)
+
 # Separate hours and minutes after split
 y_train_hours, y_train_minutes = y_train_combined[:, 0], y_train_combined[:, 1]
+y_val_hours, y_val_minutes = y_val_combined[:, 0], y_val_combined[:, 1]
 y_test_hours, y_test_minutes = y_test_combined[:, 0], y_test_combined[:, 1]
 
 
@@ -99,7 +107,7 @@ plt.xlabel('Epochs')
 plt.ylabel('MAE')
 plt.legend()
 
-plt.show()
+plt.savefig('two_head_regressor.png')
 
 # 预测时间
 predictions = model.predict(X_test[:5])
