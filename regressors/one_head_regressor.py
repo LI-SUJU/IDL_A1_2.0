@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 # 超参数
 batch_size = 128
-epochs = 500
+epochs = 300
 learning_rate = 0.0001
 
 # 初始化器
@@ -18,8 +18,8 @@ kernel_init = HeNormal()
 bias_init = Zeros()
 
 # 加载数据
-images = np.load('./data_large/images.npy')  # 替换为实际文件路径
-labels = np.load('./data_large/labels.npy')  # 替换为实际文件路径
+images = np.load('./data/data_big/images.npy')  # 替换为实际文件路径
+labels = np.load('./data//data_big/labels.npy')  # 替换为实际文件路径
 
 # 归一化图像数据
 images = images / 255.0
@@ -62,6 +62,7 @@ model = build_custom_model(input_shape=input_shape)
 
 # 自定义损失函数，考虑周期性差异
 def time_difference(y_true, y_pred):
+    y_true = tf.cast(y_true, tf.float32)
     diff = tf.abs(y_true - y_pred)
     return tf.minimum(diff, 12 - diff)  # 假设时间在12小时制内循环
 
@@ -102,13 +103,19 @@ val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTU
 early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
 checkpoint = ModelCheckpoint('best_Regression_model.keras', save_best_only=True, monitor='val_loss', mode='min')
 
+# 加载检查点（如果存在）
+if os.path.exists('best_Regression_model.keras'):
+    model.load_weights('best_Regression_model.keras')
+
 # 训练模型
 history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=[early_stopping, checkpoint])
 
-model.save('Singlehead_regression_without_labels_trained_model.h5')
+# 保存模型到 ./models 目录
+model_save_path = './models/Singlehead_regression_without_labels_trained_model.h5'
+model.save(model_save_path)
 
 # 设置保存权重的路径
-weights_path = os.path.join(os.getcwd(), 'Regression.weights.h5')
+weights_path = './models/Regression.weights.h5'
 # 保存模型权重
 model.save_weights(weights_path)
 

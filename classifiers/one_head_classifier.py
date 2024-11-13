@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 # Load data
 images = np.load('./data/data_big/images.npy')
 labels = np.load('./data/data_big/labels.npy')
+
 # Preprocess labels to 720 categories
 def label_to_category(label):
     hour, minute = label
@@ -29,24 +30,8 @@ X_test = X_test / 255.0
 X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
 X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
 
-# # 定义数据增强函数
-# def augment(images, labels):
-#     images = tf.image.random_brightness(images, 0.2)  # 调整亮度
-#     images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
-#     images = tf.image.rot90(images, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))  # 随机旋转
-#     return images, labels  # 返回增强后的图像和原始标签
-
-# def augment4valSet(images, labels):
-#     images = tf.image.random_brightness(images, 0.2)  # 调整亮度
-#     images = tf.image.random_contrast(images, 1, 2.0)  # 增强对比度
-#     return images, labels  # 返回增强后的图像和原始标签
-
-# # Apply augmentation
-# X_train, y_train = augment(X_train, y_train)
-# X_test, y_test = augment4valSet(X_test, y_test)
-
-def circular_loss(y_true, y_pred):
-    # Convert one-hot encoded labels back to integers
+# Alternative circular metric instead of using in loss
+def circular_metric(y_true, y_pred):
     y_true = tf.argmax(y_true, axis=-1)
     y_pred = tf.argmax(y_pred, axis=-1)
     
@@ -67,10 +52,10 @@ def circular_loss(y_true, y_pred):
     # Calculate L2 norm
     l2_norm = tf.square(diff)
     
-    # Calculate the final loss
-    loss = tf.reduce_mean(l2_norm)
+    # Calculate the final mean difference
+    metric = tf.reduce_mean(l2_norm)
     
-    return loss
+    return metric
 
 # Build the CNN model
 model = Sequential([
@@ -86,11 +71,15 @@ model = Sequential([
     Dense(720, activation='softmax')
 ])
 
-# Compile the model
-model.compile(optimizer='adam', loss=circular_loss, metrics=['accuracy'])
+# Compile the model with categorical cross-entropy and circular_metric as a metric
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy', circular_metric])
 
 # Train the model
 history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+
+# Save the model
+model.save('./720_head_model.h5')
+
 
 # Plot the training process
 plt.plot(history.history['accuracy'], label='accuracy')

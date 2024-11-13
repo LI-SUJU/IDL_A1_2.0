@@ -7,8 +7,8 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 # 加载数据
-images = np.load('./data_small/images.npy')
-labels = np.load('./data_small/labels.npy')
+images = np.load('./data/data_big/images.npy')
+labels = np.load('./data/data_big/labels.npy')
 
 # 归一化图像数据，将像素值缩放到 [0, 1]
 images = images / 255.0
@@ -26,11 +26,19 @@ print("Number of images:", images.shape[0])
 print("Number of labels:", labels.shape[0])
 
 # 划分数据集
-X_train, X_test, y_train_hours, y_train_minutes, y_test_hours, y_test_minutes = train_test_split(
-    images, hours, minutes, test_size=0.2, random_state=42)
+# Stack hours and minutes for simultaneous split, then separate them afterward
+labels_combined = np.stack([hours, minutes], axis=1)
+X_train, X_test, y_train_combined, y_test_combined = train_test_split(
+    images, labels_combined, test_size=0.2, random_state=42
+)
+# Separate hours and minutes after split
+y_train_hours, y_train_minutes = y_train_combined[:, 0], y_train_combined[:, 1]
+y_test_hours, y_test_minutes = y_test_combined[:, 0], y_test_combined[:, 1]
+
+
 
 # 构建 CNN 模型
-input_img = Input(shape=(75, 75, 1))
+input_img = Input(shape=(150, 150, 1))
 x = tf.keras.layers.Conv2D(32, (3, 3), activation='relu')(input_img)
 x = tf.keras.layers.MaxPooling2D((2, 2))(x)
 x = tf.keras.layers.Conv2D(64, (3, 3), activation='relu')(x)
@@ -57,6 +65,9 @@ history = model.fit(
     batch_size=16,
     validation_data=(X_test, {'hour_output': y_test_hours, 'minute_output': y_test_minutes})
 )
+
+#save model
+model.save('two_head_regressor.h5')
 
 # 评估模型
 test_loss, test_hour_loss, test_minute_loss, test_hour_mae, test_minute_mae = model.evaluate(
