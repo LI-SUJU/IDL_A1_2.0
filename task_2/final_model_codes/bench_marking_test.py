@@ -48,10 +48,10 @@ y_test_regression_decimal = prepare_labels_for_regression_decimal(y_test)
 
 # Model paths
 models_paths = [
-    '/content/one_head_720_time_classifier.h5',  # Single-head classification model path
-    '/content/classification_multihead_without_labels_train_model.h5',  # Multi-head classification model path
-    '/content/regression_singelhead_with_labels_train_model.h5',  # Circular regression model path
-    '/content/Suju_Singlehead_regression_without_labels_trained_model.h5'  # Decimal regression model path
+    './task_2/final_models/one_head_720_time_classifier.h5',  # Single-head classification model path
+    './task_2/final_models/classification_multihead_without_labels_train_model.h5',  # Multi-head classification model path
+    './task_2/final_models/regression_singelhead_with_labels_train_model.h5',  # Circular regression model path
+    './task_2/final_models/singlehead_regression_without_labels_trained_model.h5'  # Decimal regression model path
 ]
 
 # Model types and names for plotting
