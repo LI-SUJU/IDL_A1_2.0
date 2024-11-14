@@ -8,39 +8,39 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
-# 超参数
+# Hyperparameters
 batch_size = 128
 epochs = 500
 learning_rate = 0.0001
 
-# 初始化器
+# Initializers
 kernel_init = HeNormal()
 bias_init = Zeros()
 
-# 加载数据
-images = np.load('./data_large/images.npy')  # 替换为实际文件路径
-labels = np.load('./data_large/labels.npy')  # 替换为实际文件路径
+# Load data
+images = np.load('./data_large/images.npy')  # Replace with the actual file path
+labels = np.load('./data_large/labels.npy')  # Replace with the actual file path
 
-# 归一化图像数据
+# Normalize image data
 images = images / 255.0
 
-# 图像形状
+# Image shape
 if len(images.shape) == 3:
     images = np.expand_dims(images, axis=-1)
 
-# 标签转换为周期形式
+# Convert labels to circular form
 def convert_labels_to_circular(labels):
-    hours = labels[:, 0] * (2 * np.pi / 12)  # 将小时标签映射到 [0, 2pi]
-    minutes = labels[:, 1] * (2 * np.pi / 60)  # 将分钟标签映射到 [0, 2pi]
+    hours = labels[:, 0] * (2 * np.pi / 12)  # Map hour labels to [0, 2pi]
+    minutes = labels[:, 1] * (2 * np.pi / 60)  # Map minute labels to [0, 2pi]
     return np.stack([np.cos(hours), np.sin(hours), np.cos(minutes), np.sin(minutes)], axis=-1)
 
 circular_labels = convert_labels_to_circular(labels)
 
-# 数据集划分
+# Dataset split
 X_train, X_temp, y_train, y_temp = train_test_split(images, circular_labels, test_size=0.2, random_state=42)
 X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
-# 自定义模型
+# Custom model
 def build_custom_model(input_shape):
     inputs = Input(shape=input_shape)
     x = layers.Conv2D(32, (3, 3), activation='relu')(inputs)
@@ -52,14 +52,14 @@ def build_custom_model(input_shape):
     x = Flatten()(x)
     x = Dense(128, activation='relu')(x)
     x = Dropout(0.1)(x)
-    outputs = Dense(4, activation='linear')(x)  # 输出4个连续值
+    outputs = Dense(4, activation='linear')(x)  # Output 4 continuous values
     model = Model(inputs=inputs, outputs=outputs)
     return model
 
 input_shape = images[0].shape
 model = build_custom_model(input_shape=input_shape)
 
-# 自定义损失函数，计算欧氏距离
+# Custom loss function, calculating Euclidean distance
 def circular_loss(y_true, y_pred):
     hour_cos_sin_true = y_true[:, :2]
     minute_cos_sin_true = y_true[:, 2:]
@@ -70,57 +70,57 @@ def circular_loss(y_true, y_pred):
     minute_loss = tf.reduce_mean(tf.square(minute_cos_sin_true - minute_cos_sin_pred))
     return hour_loss + minute_loss
 
-# 编译模型，添加 metrics=['mae']
+# Compile the model, adding metrics=['mae']
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
     loss=circular_loss,
-    metrics=['mae']  # 添加 MAE 作为评估指标
+    metrics=['mae']  # Add MAE as an evaluation metric
 )
 
-# 打印模型结构
+# Print model structure
 model.summary()
 
-# 定义数据增强函数
+# Define data augmentation function
 def augment(images, labels):
     images = tf.image.random_brightness(images, 0.2)
     images = tf.image.random_contrast(images, 1, 2.0)
     images = tf.image.rot90(images, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))
     return images, labels
 
-# 构建 tf.data.Dataset 数据集并应用数据增强
+# Build tf.data.Dataset dataset and apply data augmentation
 train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 train_dataset = train_dataset.shuffle(buffer_size=1024).map(augment).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
 val_dataset = tf.data.Dataset.from_tensor_slices((X_val, y_val))
 val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
-# 定义回调函数
+# Define callback functions
 early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
 checkpoint = ModelCheckpoint('best_Regression_model.keras', save_best_only=True, monitor='val_loss', mode='min')
 
-# 训练模型
+# Train the model
 history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=[early_stopping, checkpoint])
 
-# 设置保存权重的路径
+# Set path to save weights
 weights_path = os.path.join(os.getcwd(), 'Regression.weights.h5')
-# 保存模型权重
+# Save model weights
 model.save_weights(weights_path)
 
-# 在测试集上评估模型
+# Evaluate the model on the test set
 test_loss, test_mae = model.evaluate(X_test, y_test, verbose=2)
 print(f"Test Loss: {test_loss}")
 print(f"Test MAE: {test_mae}")
 
-# 预测示例
+# Prediction example
 sample_test_image = X_test[0:1]
 predicted_output = model.predict(sample_test_image)
 
-# 将预测值转换回小时和分钟
+# Convert predicted values back to hours and minutes
 def convert_prediction_to_time(pred):
     pred_hour_angle = np.arctan2(pred[1], pred[0])
     pred_minute_angle = np.arctan2(pred[3], pred[2])
 
-    # 处理周期角度
+    # Process cyclic angles
     pred_hour = (pred_hour_angle * 12 / (2 * np.pi)) % 12
     pred_minute = (pred_minute_angle * 60 / (2 * np.pi)) % 60
 
@@ -129,15 +129,15 @@ def convert_prediction_to_time(pred):
 predicted_hour, predicted_minute = convert_prediction_to_time(predicted_output[0])
 print(f'Predicted Time: {predicted_hour:02}:{predicted_minute:02}')
 
-# 显示原图及预测结果
+# Display original image and prediction result
 plt.figure(figsize=(4, 4))
 plt.imshow(sample_test_image.squeeze(), cmap='gray')
 plt.title(f'Predicted Time: {predicted_hour:02}:{predicted_minute:02}')
 plt.axis('off')
 plt.show()
 
-# **绘制训练曲线**
-# 绘制训练和验证的损失曲线
+# **Plot training curves**
+# Plot training and validation loss curves
 plt.figure(figsize=(12, 4))
 plt.subplot(1, 2, 1)
 plt.plot(history.history['loss'], label='Training Loss')
@@ -147,7 +147,7 @@ plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 
-# 绘制训练和验证的平均绝对误差曲线
+# Plot training and validation mean absolute error curves
 plt.subplot(1, 2, 2)
 plt.plot(history.history['mae'], label='Training MAE')
 plt.plot(history.history['val_mae'], label='Validation MAE')
