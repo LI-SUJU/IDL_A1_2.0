@@ -18,8 +18,9 @@ kernel_init = HeNormal()
 bias_init = Zeros()
 
 
-images = np.load('./images.npy')
-labels = np.load('./labels.npy')
+# Load data
+images = np.load('./task_2/data/data_big/images.npy')
+labels = np.load('./task_2/data/data_big/labels.npy')
 
 
 images = images / 255.0
