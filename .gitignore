@@ -1,5 +1,5 @@
 # Ignore all files in the data_big directory
-/data/data_big/*
+task_2/data/data_big/*
 
 # Ignore all files in the data_small directory
-/data/data_small/*
+task_2/data/data_small/*
