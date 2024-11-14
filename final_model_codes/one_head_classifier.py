@@ -75,16 +75,32 @@ model = Sequential([
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy', circular_metric])
 
 # Train the model
-history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+history = model.fit(X_train, y_train, epochs=100, validation_data=(X_test, y_test))
 
 # Save the model
 model.save('./720_head_model.h5')
 
 
 # Plot the training process
-plt.plot(history.history['accuracy'], label='accuracy')
+plt.figure(figsize=(12, 5))
+
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='train_accuracy')
 plt.plot(history.history['val_accuracy'], label='val_accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend(loc='lower right')
-plt.show()
+plt.title('Model Accuracy')
+
+# Plot circular metric
+plt.subplot(1, 2, 2)
+plt.plot(history.history['circular_metric'], label='train_circular_metric')
+plt.plot(history.history['val_circular_metric'], label='val_circular_metric')
+plt.xlabel('Epoch')
+plt.ylabel('Circular Metric')
+plt.legend(loc='lower right')
+plt.title('Circular Metric')
+
+plt.tight_layout()
+plt.savefig('./720_classifier_training_plot.png')

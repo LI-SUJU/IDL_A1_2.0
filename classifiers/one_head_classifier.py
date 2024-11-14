@@ -71,17 +71,68 @@ model = Sequential([
     Dense(720, activation='softmax')
 ])
 
-# Compile the model with categorical cross-entropy and circular_metric as a metric
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy', circular_metric])
+import tensorflow as tf
+
+# Custom "common sense" time difference loss function with 10-minute threshold
+import tensorflow as tf
+from tensorflow.keras import backend as K
+
+def circular_time_loss(y_true, y_pred):
+    # Convert y_true to class indices (from one-hot encoding)
+    y_true = tf.argmax(y_true, axis=-1)  # Shape (batch_size,)
+    y_true = tf.cast(y_true, tf.float32)
+
+    # Get predicted classes (use argmax to get the predicted class indices)
+    pred_classes = tf.argmax(y_pred, axis=-1)  # Shape (batch_size,)
+    pred_classes = tf.cast(pred_classes, tf.float32)
+
+    # Split into hours and minutes
+    true_hours = tf.math.floordiv(y_true, 60)  # Integer division to extract hours
+    true_minutes = y_true % 60  # Extract minutes
+    pred_hours = tf.math.floordiv(pred_classes, 60)  # Integer division to extract hours
+    pred_minutes = pred_classes % 60  # Extract minutes
+    
+    # Circular difference for hours (12-hour wrap)
+    hour_diff = tf.abs(true_hours - pred_hours)
+    hour_diff = tf.minimum(hour_diff, 12 - hour_diff)  # Adjust for circular behavior
+
+    # Circular difference for minutes (60-minute wrap)
+    minute_diff = tf.abs(true_minutes - pred_minutes)
+    minute_diff = tf.minimum(minute_diff, 60 - minute_diff)  # Adjust for circular behavior
+    
+    # Combine hours and minutes into total circular difference
+    total_diff = hour_diff * 60 + minute_diff  # Total difference in minutes
+
+    # Apply threshold (e.g., 10 minutes) where loss is minimized
+    zero_loss_mask = tf.cast(total_diff <= 10, tf.float32)  # Loss should be zero if within 10 minutes
+    
+    # Use sparse categorical crossentropy for base loss
+    loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
+
+    # Apply circular weight to the loss
+    weighted_loss = loss * (1 - zero_loss_mask / 60)  # Scale the loss by circular difference
+
+    return K.mean(weighted_loss)
+
+
+
+# Compile the model with the new loss function
+model.compile(optimizer='adam', loss="categorical_crossentropy", metrics=['accuracy', circular_metric])
+
 
 # Train the model
-history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+history = model.fit(X_train, y_train, epochs=50, validation_data=(X_test, y_test))
+
+
 
 # Save the model
 model.save('./720_head_model.h5')
 
 
 # Plot the training process
+# plot title
+plt.figure(figsize=(12, 5))
+plt.title('Model Accuracy')
 plt.plot(history.history['accuracy'], label='accuracy')
 plt.plot(history.history['val_accuracy'], label='val_accuracy')
 plt.xlabel('Epoch')
