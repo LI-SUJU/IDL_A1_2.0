@@ -7,8 +7,8 @@ from tensorflow.keras.utils import to_categorical
 import matplotlib.pyplot as plt
 
 # Load data
-images = np.load('./data/data_big/images.npy')
-labels = np.load('./data/data_big/labels.npy')
+images = np.load('./task_2/data/data_big/images.npy')
+labels = np.load('./task_2/data/data_big/labels.npy')
 
 # Preprocess labels to 720 categories
 def label_to_category(label):

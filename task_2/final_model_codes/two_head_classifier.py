@@ -27,8 +27,8 @@ kernel_init = HeNormal()  # He Normal initialization
 bias_init = Zeros()  # The bias is initialized to 0
 
 # Loading data
-images = np.load('./data_large/images.npy')  # Replace with the actual file path
-labels = np.load('./data_large/labels.npy')  # Replace with the actual file path
+images = np.load('./task_2/data/data_big/images.npy')
+labels = np.load('./task_2/data/data_big/labels.npy')
 
 # images = tf.squeeze(tf.image.resize(tf.expand_dims(images, -1), [299, 299]))
 
@@ -207,7 +207,7 @@ val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTU
 
 # Define callback functions
 early_stopping = EarlyStopping(monitor='val_minute_output_accuracy', patience=20, restore_best_weights=True, mode='max')
-checkpoint = ModelCheckpoint('best_model.keras', save_best_only=True, monitor='val_minute_output_accuracy',
+checkpoint = ModelCheckpoint('best_model.keras', save_best_only=True, monitor='val_minute_output_accuracy')
 
 # Train the model and add callback
 history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=[early_stopping, checkpoint])
