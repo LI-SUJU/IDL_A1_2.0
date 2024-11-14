@@ -8,22 +8,23 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
-# Hyperparameters
+
 batch_size = 128
 epochs = 500
 learning_rate = 0.0001
 
-# Initializers
+
 kernel_init = HeNormal()
 bias_init = Zeros()
 
+
+# Load data
 images = np.load('./task_2/data/data_big/images.npy')
 labels = np.load('./task_2/data/data_big/labels.npy')
 
-# Normalize image data
+
 images = images / 255.0
 
-# Image shape
 if len(images.shape) == 3:
     images = np.expand_dims(images, axis=-1)
 
@@ -36,11 +37,11 @@ def convert_labels_to_decimal(labels):
 
 decimal_labels = convert_labels_to_decimal(labels)
 
-# Dataset split
+# Dataset Partitioning
 X_train, X_temp, y_train, y_temp = train_test_split(images, decimal_labels, test_size=0.2, random_state=42)
 X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
 
-# Custom model
+# Custom Model
 def build_custom_model(input_shape):
     inputs = Input(shape=input_shape)
     x = layers.Conv2D(32, (3, 3), activation='relu')(inputs)
@@ -52,32 +53,32 @@ def build_custom_model(input_shape):
     x = Flatten()(x)
     x = Dense(128, activation='relu')(x)
     x = Dropout(0.1)(x)
-    outputs = Dense(1, activation='linear')(x)  # Output 1 continuous value
+    outputs = Dense(1, activation='linear')(x)
     model = Model(inputs=inputs, outputs=outputs)
     return model
 
 input_shape = images[0].shape
 model = build_custom_model(input_shape=input_shape)
 
-# Custom loss function, considering cyclic differences
+# Custom loss function to take into account periodic differences
 def time_difference(y_true, y_pred):
     diff = tf.abs(y_true - y_pred)
-    return tf.minimum(diff, 12 - diff)  # Assuming time is cyclic within a 12-hour format
+    return tf.minimum(diff, 12 - diff)  # Assume that time cycles in a 12-hour format
 
 def custom_loss(y_true, y_pred):
     diff = time_difference(y_true, y_pred)
     return tf.reduce_mean(tf.square(diff))
 
-# Custom MAE metric, considering cyclic differences
+# Custom MAE indicator to take into account periodic differences
 def custom_mae(y_true, y_pred):
     diff = time_difference(y_true, y_pred)
     return tf.reduce_mean(diff)
 
-# Compile model
+# Compile the model
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
     loss=custom_loss,
-    metrics=[custom_mae]  # Use custom MAE as the metric
+    metrics=[custom_mae]  # Using a custom MAE indicator
 )
 
 # Print model structure
@@ -90,21 +91,21 @@ def augment(images, labels):
     images = tf.image.rot90(images, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32))
     return images, labels
 
-# Build tf.data.Dataset dataset and apply data augmentation
+# Build a tf.data.Dataset dataset and apply data augmentation
 train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
 train_dataset = train_dataset.shuffle(buffer_size=1024).map(augment).batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
 val_dataset = tf.data.Dataset.from_tensor_slices((X_val, y_val))
 val_dataset = val_dataset.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 
-# Define callback functions
+# Define callback function
 early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True, mode='min')
 checkpoint = ModelCheckpoint('best_Regression_model.keras', save_best_only=True, monitor='val_loss', mode='min')
 
-# Train the model
+# Training the model
 history = model.fit(train_dataset, epochs=epochs, validation_data=val_dataset, callbacks=[early_stopping, checkpoint])
 
-# Set path to save weights
+# Set the path to save the weights
 weights_path = os.path.join(os.getcwd(), 'Regression.weights.h5')
 # Save model weights
 model.save_weights(weights_path)
@@ -114,15 +115,15 @@ test_loss, test_mae = model.evaluate(X_test, y_test, verbose=2)
 print(f"Test Loss: {test_loss}")
 print(f"Test MAE: {test_mae}")
 
-# Prediction example
+# Prediction Example
 sample_test_image = X_test[0:1]
 predicted_output = model.predict(sample_test_image)
 
-# Convert predicted values back to hours and minutes
+# Convert the forecast back to hours and minutes
 def convert_prediction_to_time(pred):
-    pred_time = pred[0] % 12  # Ensure within 0 to 12
+    pred_time = pred[0] % 12  # Make sure it is between 0 and 12
     if pred_time < 0:
-        pred_time += 12  # Ensure positive time
+        pred_time += 12  # Make sure the time is a positive number
     pred_hour = int(pred_time)
     pred_minute = int(round((pred_time - pred_hour) * 60)) % 60
     return pred_hour % 12, pred_minute
@@ -130,15 +131,14 @@ def convert_prediction_to_time(pred):
 predicted_hour, predicted_minute = convert_prediction_to_time(predicted_output[0])
 print(f'Predicted Time: {predicted_hour:02}:{predicted_minute:02}')
 
-# Display original image and prediction result
+# Display the original image and the predicted results
 plt.figure(figsize=(4, 4))
 plt.imshow(sample_test_image.squeeze(), cmap='gray')
 plt.title(f'Predicted Time: {predicted_hour:02}:{predicted_minute:02}')
 plt.axis('off')
 plt.show()
 
-# **Plot training curves**
-# Plot training and validation loss curves
+# Plot the training and validation loss curves
 plt.figure(figsize=(12, 4))
 plt.subplot(1, 2, 1)
 plt.plot(history.history['loss'], label='Training Loss')
@@ -148,7 +148,7 @@ plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 
-# Plot training and validation custom MAE curves
+# Plotting custom MAE curves for training and validation
 plt.subplot(1, 2, 2)
 plt.plot(history.history['custom_mae'], label='Training MAE')
 plt.plot(history.history['val_custom_mae'], label='Validation MAE')
