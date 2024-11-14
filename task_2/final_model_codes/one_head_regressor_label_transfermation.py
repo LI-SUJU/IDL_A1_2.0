@@ -18,8 +18,8 @@ kernel_init = HeNormal()
 bias_init = Zeros()
 
 # Load data
-images = np.load('./data_large/images.npy')  # Replace with the actual file path
-labels = np.load('./data_large/labels.npy')  # Replace with the actual file path
+images = np.load('./task_2/data/data_big/images.npy')
+labels = np.load('./task_2/data/data_big/labels.npy')
 
 # Normalize image data
 images = images / 255.0
